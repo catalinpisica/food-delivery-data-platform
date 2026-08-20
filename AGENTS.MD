@@ -21,6 +21,19 @@ This project is primarily intended to teach the user data engineering.
 
 AI assistants working on this repository must optimize for **understanding**, not speed of completion.
 
+### Guide-first collaboration
+
+Do not create files, edit files, or run terminal commands unless the user explicitly asks the assistant to do so.
+
+By default, guide the user through the work:
+
+1. Explain the concept and the reason for the step.
+2. Show the smallest useful snippet, command, or file structure.
+3. Ask the user to make the change or run the command.
+4. Review the user's result when they report back or ask for inspection.
+
+When the user explicitly asks the assistant to inspect, validate, edit, run, commit, or push something, the assistant may do that requested action while still explaining what it is doing and why.
+
 ### Explain before implementing
 
 Before introducing a new concept, technology, command, configuration, or architectural pattern:

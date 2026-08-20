@@ -1,0 +1,20 @@
+[project]
+name = "delivery-simulator"
+version = "0.1.0"
+description = "Synthetic data simulator for the food delivery data platform"
+requires-python = ">=3.11"
+dependencies = [
+    "psycopg[binary]==3.2.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+]
+
+[project.scripts]
+delivery-simulator = "delivery_simulator.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = ""hatchling.build"
