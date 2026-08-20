@@ -150,6 +150,39 @@ CREATE TABLE IF NOT EXISTS app.deliveries (
     updated_at TIMESTAMPTZ NOT NULL
 );
 
+CREATE INDEX IF NOT EXISTS idx_customers_zone_id
+    ON app.customers(zone_id);
+
+CREATE INDEX IF NOT EXISTS idx_restaurants_zone_id
+    ON app.restaurants(zone_id);
+
+CREATE INDEX IF NOT EXISTS idx_couriers_home_zone_id
+    ON app.couriers(home_zone_id);
+
+CREATE INDEX IF NOT EXISTS idx_menu_items_restaurant_id
+    ON app.menu_items(restaurant_id);
+
+CREATE INDEX IF NOT EXISTS idx_orders_customer_id
+    ON app.orders(customer_id);
+
+CREATE INDEX IF NOT EXISTS idx_orders_restaurant_id
+    ON app.orders(restaurant_id);
+
+CREATE INDEX IF NOT EXISTS idx_orders_courier_id
+    ON app.orders(courier_id);
+
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id
+    ON app.order_items(order_id);
+
+CREATE INDEX IF NOT EXISTS idx_order_items_menu_item_id
+    ON app.order_items(menu_item_id);
+
+CREATE INDEX IF NOT EXISTS idx_deliveries_order_id
+    ON app.deliveries(order_id);
+
+CREATE INDEX IF NOT EXISTS idx_deliveries_courier_id
+    ON app.deliveries(courier_id);
+
 INSERT INTO app.zones (
     zone_id,
     zone_name,
