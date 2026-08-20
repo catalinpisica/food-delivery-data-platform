@@ -9,6 +9,83 @@ CREATE TABLE IF NOT EXISTS app.zones (
     created_at TIMESTAMPTZ NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS app.customers (
+    customer_id INTEGER PRIMARY KEY,
+    zone_id INTEGER NOT NULL REFERENCES app.zones(zone_id),
+    signup_channel TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    is_active BOOLEAN NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS app.restaurants (
+    restaurant_id INTEGER PRIMARY KEY,
+    restaurant_name TEXT NOT NULL,
+    zone_id INTEGER NOT NULL REFERENCES app.zones(zone_id),
+    cuisine_type TEXT NOT NULL,
+    price_category TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    is_active BOOLEAN NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS app.menu_items (
+    menu_item_id INTEGER PRIMARY KEY,
+    restaurant_id INTEGER NOT NULL REFERENCES app.restaurants(restaurant_id),
+    item_name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    price_cents INTEGER NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    is_available BOOLEAN NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS app.couriers (
+    courier_id INTEGER PRIMARY KEY,
+    home_zone_id INTEGER NOT NULL REFERENCES app.zones(zone_id),
+    vehicle_type TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    status TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS app.orders (
+    order_id INTEGER PRIMARY KEY,
+    customer_id INTEGER NOT NULL REFERENCES app.customers(customer_id),
+    restaurant_id INTEGER NOT NULL REFERENCES app.restaurants(restaurant_id),
+    courier_id INTEGER REFERENCES app.couriers(courier_id),
+    customer_zone_id INTEGER NOT NULL REFERENCES app.zones(zone_id),
+    restaurant_zone_id INTEGER NOT NULL REFERENCES app.zones(zone_id),
+    status TEXT NOT NULL,
+    subtotal_cents INTEGER NOT NULL,
+    delivery_fee_cents INTEGER NOT NULL,
+    total_amount_cents INTEGER NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS app.order_items (
+    order_item_id INTEGER PRIMARY KEY,
+    order_id INTEGER NOT NULL REFERENCES app.orders(order_id),
+    menu_item_id INTEGER NOT NULL REFERENCES app.menu_items(menu_item_id),
+    quantity INTEGER NOT NULL,
+    unit_price_cents INTEGER NOT NULL,
+    total_price_cents INTEGER NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS app.deliveries (
+    delivery_id INTEGER PRIMARY KEY,
+    order_id INTEGER NOT NULL REFERENCES app.orders(order_id),
+    courier_id INTEGER NOT NULL REFERENCES app.couriers(courier_id),
+    status TEXT NOT NULL,
+    assigned_at TIMESTAMPTZ,
+    picked_up_at TIMESTAMPTZ,
+    delivered_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL
+);
+
 INSERT INTO app.zones (
     zone_id,
     zone_name,
