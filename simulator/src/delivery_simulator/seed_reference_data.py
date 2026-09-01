@@ -1,7 +1,6 @@
 from delivery_simulator.db import connect
 from delivery_simulator.models import Courier, Customer, MenuItem, Restaurant, Zone
 
-
 CUISINE_TYPES = [
     "Italian",
     "Indian",
@@ -58,6 +57,119 @@ SIGNUP_CHANNELS = [
     "referral",
     "social",
 ]
+def list_menu_items() -> list[MenuItem]:
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    menu_item_id,
+                    restaurant_id,
+                    item_name,
+                    category,
+                    price_cents,
+                    is_available
+                FROM app.menu_items
+                ORDER BY menu_item_id;
+                """
+            )
+            rows = cur.fetchall()
+
+    return [
+        MenuItem(
+            menu_item_id=menu_item_id,
+            restaurant_id=restaurant_id,
+            item_name=item_name,
+            category=category,
+            price_cents=price_cents,
+            is_available=is_available,
+        )
+        for menu_item_id, restaurant_id, item_name, category, price_cents, is_available in rows
+    ]
+
+def list_couriers() -> list[Courier]:
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    courier_id,
+                    home_zone_id,
+                    vehicle_type,
+                    status
+                FROM app.couriers
+                ORDER BY courier_id;
+                """
+            )
+            rows = cur.fetchall()
+
+    return [
+        Courier(
+            courier_id=courier_id,
+            home_zone_id=home_zone_id,
+            vehicle_type=vehicle_type,
+            status=status,
+        )
+        for courier_id, home_zone_id, vehicle_type, status in rows
+    ]
+
+
+def list_customers() -> list[Customer]:
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    customer_id,
+                    zone_id,
+                    signup_channel,
+                    is_active
+                FROM app.customers
+                ORDER BY customer_id;
+                """
+            )
+            rows = cur.fetchall()
+
+    return [
+        Customer(
+            customer_id=customer_id,
+            zone_id=zone_id,
+            signup_channel=signup_channel,
+            is_active=is_active,
+        )
+        for customer_id, zone_id, signup_channel, is_active in rows
+    ]
+
+
+def list_restaurants() -> list[Restaurant]:
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    restaurant_id,
+                    restaurant_name,
+                    zone_id,
+                    cuisine_type,
+                    price_category,
+                    is_active
+                FROM app.restaurants
+                ORDER BY restaurant_id;
+                """
+            )
+            rows = cur.fetchall()
+
+    return [
+        Restaurant(
+            restaurant_id=restaurant_id,
+            restaurant_name=restaurant_name,
+            zone_id=zone_id,
+            cuisine_type=cuisine_type,
+            price_category=price_category,
+            is_active=is_active,
+        )
+        for restaurant_id, restaurant_name, zone_id, cuisine_type, price_category, is_active in rows
+    ]
 
 def list_zones() -> list[Zone]:
     with connect() as conn:

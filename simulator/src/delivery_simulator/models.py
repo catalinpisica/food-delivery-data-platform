@@ -36,3 +36,34 @@ class Customer:
     zone_id: int
     signup_channel: str
     is_active: bool
+
+@dataclass(frozen=True)
+class Order:
+    order_id: int
+    customer_id: int
+    restaurant_id: int
+    courier_id: int | None
+    customer_zone_id: int
+    restaurant_zone_id: int
+    status: str
+    subtotal_cents: int
+    delivery_fee_cents: int
+    total_amount_cents: int
+
+
+@dataclass(frozen=True)
+class OrderItem:
+    order_item_id: int
+    order_id: int
+    menu_item_id: int
+    quantity: int
+    unit_price_cents: int
+    total_price_cents: int
+
+
+@dataclass(frozen=True)
+class Delivery:
+    delivery_id: int
+    order_id: int
+    courier_id: int
+    status: str

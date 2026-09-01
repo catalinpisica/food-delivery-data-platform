@@ -10,9 +10,18 @@ from delivery_simulator.seed_reference_data import (
     insert_customers,
     insert_menu_items,
     insert_restaurants,
+    list_couriers,
+    list_customers,
+    list_menu_items,
+    list_restaurants,
     list_zones,
 )
-
+from delivery_simulator.generate_orders import (
+    generate_delivered_orders,
+    insert_deliveries,
+    insert_order_items,
+    insert_orders,
+)
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="delivery-simulator",
@@ -76,6 +85,26 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     preview_couriers_parser.add_argument(
+        "--profile",
+        choices=["tiny", "dev", "demo"],
+        default="tiny",
+        help="Dataset size profile to generate.",
+    )
+    preview_orders_parser = subparsers.add_parser(
+        "preview-orders",
+        help="Preview generated orders without inserting them.",
+    )
+    preview_orders_parser.add_argument(
+        "--profile",
+        choices=["tiny", "dev", "demo"],
+        default="tiny",
+        help="Dataset size profile to generate.",
+    )
+    generate_orders_parser = subparsers.add_parser(
+        "generate-orders",
+        help="Generate and insert delivered orders.",
+    )
+    generate_orders_parser.add_argument(
         "--profile",
         choices=["tiny", "dev", "demo"],
         default="tiny",
@@ -202,3 +231,58 @@ def main() -> None:
 
         print(f"generated couriers: {len(couriers)}")
         return
+
+    if args.command == "preview-orders":
+        profile = get_profile(args.profile)
+        customers = list_customers()
+        restaurants = list_restaurants()
+        menu_items = list_menu_items()
+        couriers = list_couriers()
+
+        orders, order_items, deliveries = generate_delivered_orders(
+            customers=customers,
+            restaurants=restaurants,
+            menu_items=menu_items,
+            couriers=couriers,
+            order_count=profile.orders_count,
+        )
+
+        for order in orders[:10]:
+            print(
+                f"{order.order_id}: "
+                f"customer_id={order.customer_id}, "
+                f"restaurant_id={order.restaurant_id}, "
+                f"courier_id={order.courier_id}, "
+                f"total_cents={order.total_amount_cents}"
+            )
+
+        print(f"generated orders: {len(orders)}")
+        print(f"generated order items: {len(order_items)}")
+        print(f"generated deliveries: {len(deliveries)}")
+        return
+
+    if args.command == "generate-orders":
+        profile = get_profile(args.profile)
+        customers = list_customers()
+        restaurants = list_restaurants()
+        menu_items = list_menu_items()
+        couriers = list_couriers()
+
+        orders, order_items, deliveries = generate_delivered_orders(
+            customers=customers,
+            restaurants=restaurants,
+            menu_items=menu_items,
+            couriers=couriers,
+            order_count=profile.orders_count,
+        )
+
+        insert_orders(orders)
+        insert_order_items(order_items)
+        insert_deliveries(deliveries)
+
+        print(f"generated profile: {profile.name}")
+        print(f"orders inserted/updated: {len(orders)}")
+        print(f"order items inserted/updated: {len(order_items)}")
+        print(f"deliveries inserted/updated: {len(deliveries)}")
+        return
+
