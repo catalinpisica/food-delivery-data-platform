@@ -1,6 +1,6 @@
 import argparse
 from delivery_simulator.config import get_profile
-from delivery_simulator.db import connect
+from delivery_simulator.db import connect, get_safe_database_config
 from delivery_simulator.seed_reference_data import (
     generate_couriers,
     generate_customers,
@@ -50,6 +50,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "check-db",
         help="Check that the simulator can connect to PostgreSQL."
+    )
+
+    subparsers.add_parser(
+        "show-db-config",
+        help="Show the PostgreSQL settings the simulator will use.",
     )
 
     subparsers.add_parser(
@@ -161,6 +166,16 @@ def main() -> None:
 
         print(f"database: {database_name}")
         print(f"user: {user_name}")
+        return
+
+    if args.command == "show-db-config":
+        config = get_safe_database_config()
+
+        print(f"host: {config['host']}")
+        print(f"port: {config['port']}")
+        print(f"dbname: {config['dbname']}")
+        print(f"user: {config['user']}")
+        print(f"password: {config['password']}")
         return
 
     if args.command == "list-zones":
