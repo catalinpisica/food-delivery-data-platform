@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 
 @dataclass(frozen=True)
 class Zone:
@@ -49,6 +50,8 @@ class Order:
     subtotal_cents: int
     delivery_fee_cents: int
     total_amount_cents: int
+    created_at: datetime
+    updated_at: datetime
 
 
 @dataclass(frozen=True)
@@ -67,3 +70,8 @@ class Delivery:
     order_id: int
     courier_id: int
     status: str
+    assigned_at: datetime | None
+    picked_up_at: datetime | None
+    delivered_at: datetime | None
+    created_at: datetime
+    updated_at: datetime

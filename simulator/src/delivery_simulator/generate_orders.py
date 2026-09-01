@@ -8,7 +8,7 @@ from delivery_simulator.models import (
     Restaurant,
 )
 from delivery_simulator.db import connect
-
+from datetime import datetime, timedelta, timezone
 
 ORDER_STATUS_CREATED = "CREATED"
 ORDER_STATUS_ACCEPTED = "ACCEPTED"
@@ -24,6 +24,8 @@ DELIVERY_STATUS_CANCELLED = "CANCELLED"
 
 DELIVERY_FEE_CENTS = 299
 ITEMS_PER_ORDER = 2
+
+BASE_ORDER_TIME = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
 
 
 def choose_order_status(order_id: int) -> str:
@@ -65,6 +67,50 @@ def order_has_assigned_courier(order_status: str) -> bool:
         ORDER_STATUS_DELIVERED,
     )
 
+def calculate_order_updated_at(order_status: str, created_at: datetime) -> datetime:
+    if order_status == ORDER_STATUS_CREATED:
+        return created_at
+
+    if order_status == ORDER_STATUS_ACCEPTED:
+        return created_at + timedelta(minutes=2)
+
+    if order_status == ORDER_STATUS_COURIER_ASSIGNED:
+        return created_at + timedelta(minutes=5)
+
+    if order_status == ORDER_STATUS_PICKED_UP:
+        return created_at + timedelta(minutes=20)
+
+    if order_status == ORDER_STATUS_CANCELLED:
+        return created_at + timedelta(minutes=3)
+
+    return created_at + timedelta(minutes=40)
+
+def calculate_delivery_timestamps(
+    delivery_status: str,
+    order_created_at: datetime,
+) -> tuple[datetime, datetime | None, datetime | None, datetime]:
+    assigned_at = order_created_at + timedelta(minutes=5)
+    picked_up_at = None
+    delivered_at = None
+
+    if delivery_status in (
+        DELIVERY_STATUS_PICKED_UP,
+        DELIVERY_STATUS_DELIVERED,
+    ):
+        picked_up_at = order_created_at + timedelta(minutes=20)
+
+    if delivery_status == DELIVERY_STATUS_DELIVERED:
+        delivered_at = order_created_at + timedelta(minutes=40)
+
+    updated_at = assigned_at
+
+    if picked_up_at is not None:
+        updated_at = picked_up_at
+
+    if delivered_at is not None:
+        updated_at = delivered_at
+
+    return assigned_at, picked_up_at, delivered_at, updated_at
 
 def generate_orders(
     customers: list[Customer],
@@ -87,6 +133,11 @@ def generate_orders(
         restaurant = restaurants[restaurant_index]
         courier = couriers[courier_index]
         order_status = choose_order_status(order_id)
+        order_created_at = BASE_ORDER_TIME + timedelta(minutes=order_id - 1)
+        order_updated_at = calculate_order_updated_at(
+            order_status=order_status,
+            created_at=order_created_at,
+        )
         assigned_courier_id = None
 
         if order_has_assigned_courier(order_status):
@@ -118,6 +169,8 @@ def generate_orders(
             subtotal_cents=subtotal_cents,
             delivery_fee_cents=DELIVERY_FEE_CENTS,
             total_amount_cents=total_amount_cents,
+            created_at=order_created_at,
+            updated_at=order_updated_at,
         )
 
         orders.append(order)
@@ -139,11 +192,22 @@ def generate_orders(
         delivery_status = choose_delivery_status(order_status)
 
         if delivery_status is not None:
+            assigned_at, picked_up_at, delivered_at, delivery_updated_at = (
+                calculate_delivery_timestamps(
+                        delivery_status=delivery_status,
+                        order_created_at=order_created_at,
+                    )
+            )
             delivery = Delivery(
                 delivery_id=delivery_id,
                 order_id=order_id,
                 courier_id=courier.courier_id,
                 status=delivery_status,
+                assigned_at=assigned_at,
+                picked_up_at=picked_up_at,
+                delivered_at=delivered_at,
+                created_at=assigned_at,
+                updated_at=delivery_updated_at,
             )
 
             deliveries.append(delivery)
@@ -203,8 +267,8 @@ def insert_orders(orders: list[Order]) -> None:
                         %s,
                         %s,
                         %s,
-                        NOW(),
-                        NOW()
+                        %s,
+                        %s
                     )
                     ON CONFLICT (order_id) DO UPDATE
                     SET
@@ -217,7 +281,7 @@ def insert_orders(orders: list[Order]) -> None:
                         subtotal_cents = EXCLUDED.subtotal_cents,
                         delivery_fee_cents = EXCLUDED.delivery_fee_cents,
                         total_amount_cents = EXCLUDED.total_amount_cents,
-                        updated_at = NOW();
+                        updated_at = EXCLUDED.updated_at;
                     """,
                     (
                         order.order_id,
@@ -230,6 +294,8 @@ def insert_orders(orders: list[Order]) -> None:
                         order.subtotal_cents,
                         order.delivery_fee_cents,
                         order.total_amount_cents,
+                        order.created_at,
+                        order.updated_at,
                     ),
                 )
 
@@ -299,11 +365,11 @@ def insert_deliveries(deliveries: list[Delivery]) -> None:
                         %s,
                         %s,
                         %s,
-                        NOW(),
-                        NOW(),
-                        NOW(),
-                        NOW(),
-                        NOW()
+                        %s,
+                        %s,
+                        %s,
+                        %s,
+                        %s
                     )
                     ON CONFLICT (delivery_id) DO UPDATE
                     SET
@@ -313,12 +379,17 @@ def insert_deliveries(deliveries: list[Delivery]) -> None:
                         assigned_at = EXCLUDED.assigned_at,
                         picked_up_at = EXCLUDED.picked_up_at,
                         delivered_at = EXCLUDED.delivered_at,
-                        updated_at = NOW();
+                        updated_at = EXCLUDED.updated_at;
                     """,
                     (
                         delivery.delivery_id,
                         delivery.order_id,
                         delivery.courier_id,
                         delivery.status,
+                        delivery.assigned_at,
+                        delivery.picked_up_at,
+                        delivery.delivered_at,
+                        delivery.created_at,
+                        delivery.updated_at
                     ),
                 )
