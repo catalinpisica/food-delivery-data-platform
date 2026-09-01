@@ -23,7 +23,8 @@ DELIVERY_STATUS_PICKED_UP = "PICKED_UP"
 DELIVERY_STATUS_DELIVERED = "DELIVERED"
 
 DELIVERY_FEE_CENTS = 299
-ITEMS_PER_ORDER = 2
+MIN_ITEMS_PER_ORDER = 1
+MAX_ITEMS_PER_ORDER = 5
 
 BASE_ORDER_TIME = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
 
@@ -67,6 +68,31 @@ def order_has_assigned_courier(order_status: str) -> bool:
         ORDER_STATUS_DELIVERED,
     )
 
+def choose_items_per_order(order_id: int) -> int:
+    possible_item_counts = [
+        1,
+        2,
+        3,
+        4,
+        5,
+    ]
+
+    item_count_index = order_id % len(possible_item_counts)
+
+    return possible_item_counts[item_count_index]
+
+def choose_item_quantity(order_id: int, menu_item_id: int) -> int:
+    possible_quantities = [
+        1,
+        1,
+        1,
+        2,
+        3,
+    ]
+
+    quantity_index = (order_id + menu_item_id) % len(possible_quantities)
+
+    return possible_quantities[quantity_index]
 
 def calculate_order_updated_at(order_status: str, created_at: datetime) -> datetime:
     if order_status == ORDER_STATUS_CREATED:
@@ -152,12 +178,14 @@ def generate_orders(
             if menu_item.restaurant_id == restaurant.restaurant_id:
                 restaurant_menu_items.append(menu_item)
 
-        selected_menu_items = restaurant_menu_items[:ITEMS_PER_ORDER]
+        items_per_order = choose_items_per_order(order_id)
+        selected_menu_items = restaurant_menu_items[:items_per_order]
 
         subtotal_cents = 0
 
         for menu_item in selected_menu_items:
-            subtotal_cents = subtotal_cents + menu_item.price_cents
+            quantity = choose_item_quantity(order_id, menu_item.menu_item_id)
+            subtotal_cents = subtotal_cents + (menu_item.price_cents * quantity)
 
         total_amount_cents = subtotal_cents + DELIVERY_FEE_CENTS
 
@@ -179,13 +207,14 @@ def generate_orders(
         orders.append(order)
 
         for menu_item in selected_menu_items:
+            quantity = choose_item_quantity(order_id, menu_item.menu_item_id)
             order_item = OrderItem(
                 order_item_id=order_item_id,
                 order_id=order_id,
                 menu_item_id=menu_item.menu_item_id,
-                quantity=1,
+                quantity=quantity,
                 unit_price_cents=menu_item.price_cents,
-                total_price_cents=menu_item.price_cents,
+                total_price_cents=menu_item.price_cents * quantity,
             )
 
             order_items.append(order_item)

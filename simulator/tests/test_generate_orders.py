@@ -6,7 +6,8 @@ from delivery_simulator.generate_orders import (
     DELIVERY_STATUS_ASSIGNED,
     DELIVERY_STATUS_DELIVERED,
     DELIVERY_STATUS_PICKED_UP,
-    ITEMS_PER_ORDER,
+    MAX_ITEMS_PER_ORDER,
+    MIN_ITEMS_PER_ORDER,
     ORDER_STATUS_ACCEPTED,
     ORDER_STATUS_CANCELLED,
     ORDER_STATUS_COURIER_ASSIGNED,
@@ -120,7 +121,8 @@ def test_generate_orders_creates_expected_counts() -> None:
     )
 
     assert len(orders) == 20
-    assert len(order_items) == 20 * ITEMS_PER_ORDER
+    assert len(order_items) >= 20 * MIN_ITEMS_PER_ORDER
+    assert len(order_items) <= 20 * MAX_ITEMS_PER_ORDER    
     assert len(deliveries) == 17
 
 
@@ -214,3 +216,21 @@ def test_delivery_timestamps_follow_status() -> None:
     assert delivered_delivery.assigned_at < delivered_delivery.picked_up_at
     assert delivered_delivery.picked_up_at < delivered_delivery.delivered_at
     assert delivered_delivery.updated_at == delivered_delivery.delivered_at
+
+def test_order_items_have_variable_quantities() -> None:
+    _orders, order_items, _deliveries = generate_orders(
+        customers=make_customers(),
+        restaurants=make_restaurants(),
+        menu_items=make_menu_items(),
+        couriers=make_couriers(),
+        order_count=20,
+    )
+
+    quantities = []
+
+    for order_item in order_items:
+        quantities.append(order_item.quantity)
+
+    assert 1 in quantities
+    assert 2 in quantities
+    assert 3 in quantities
