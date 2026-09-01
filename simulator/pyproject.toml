@@ -5,6 +5,8 @@ description = "Synthetic data simulator for the food delivery data platform"
 requires-python = ">=3.11"
 dependencies = [
     "psycopg[binary]==3.2.9",
+    "boto3==1.35.99",
+    "confluent-kafka==2.6.1",
 ]
 
 [project.optional-dependencies]

@@ -54,6 +54,21 @@ services:
       STATUS_STORAGE_TOPIC: debezium_statuses
     ports:
       - "8083:8083"
+  
+  seaweedfs:
+    image: chrislusf/seaweedfs:3.80
+    container_name: food_delivery_seaweedfs
+    command:
+      - server
+      - -s3
+      - -dir=/data
+      - -volume.max=0
+    ports:
+      - "8333:8333"
+      - "9333:9333"
+    volumes:
+      - seaweedfs_data:/data
 
 volumes:
   postgres_data:
+  seaweedfs_data:

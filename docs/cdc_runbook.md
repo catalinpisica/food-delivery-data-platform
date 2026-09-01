@@ -48,6 +48,16 @@ List Redpanda topics:
 docker compose exec redpanda rpk topic list
 ```
 
+## Create Buckets
+
+Create the raw data bucket in SeaweedFS:
+
+```bash
+simulator/.venv/bin/python scripts/create_s3_buckets.py
+```
+
+This creates the `food-delivery-raw` bucket if it does not already exist.
+
 ## Register Connector
 
 Debezium Connect runs as a service, but it needs a connector configuration before it knows which database and tables to watch.
