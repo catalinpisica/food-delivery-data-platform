@@ -267,15 +267,22 @@ The project must not claim that Spark is required by the dataset size.
 
              ┌────────────┬─────────────┐
              │            │             │
-        PostgreSQL      Kafka       Weather API
-          OLTP          events
-             │            │             │
-             │            ▼             │
-             │          Spark           │
-             │       Structured         │
-             │        Streaming         │
-             │            │             │
-             └────────────┼─────────────┘
+        PostgreSQL                  Weather API
+          OLTP                         │
+             │                         │
+             ▼                         │
+        Debezium CDC                   │
+             │                         │
+             ▼                         │
+      Kafka-compatible                 │
+       event topics                    │
+             │                         │
+             ▼                         │
+           Spark                       │
+        Structured                     │
+         Streaming                     │
+             │                         │
+             └────────────┬────────────┘
                           ▼
                     ┌───────────┐
                     │ SeaweedFS │
@@ -332,7 +339,8 @@ GitHub Actions
 | Development environment    | GitHub Codespaces          |
 | Source simulator           | Python                     |
 | Operational database       | PostgreSQL                 |
-| Event streaming            | Apache Kafka               |
+| Change data capture        | Debezium                   |
+| Event streaming            | Redpanda / Apache Kafka protocol |
 | Object storage / data lake | SeaweedFS                  |
 | File format                | Apache Parquet             |
 | Distributed processing     | Apache Spark               |
@@ -351,20 +359,30 @@ GitHub Actions
 
 # 6. Source systems
 
-The project initially contains three different source patterns:
+The project initially contains two source patterns and one event stream derived from the operational database:
 
 ```text
 PostgreSQL
     → mutable relational operational data
 
-Kafka
-    → continuous event stream
+Debezium CDC + Kafka-compatible topics
+    → continuous stream of PostgreSQL changes
 
 Weather API
     → external API data
 ```
 
 This deliberately provides experience with different ingestion patterns.
+
+The main source flow is:
+
+```text
+delivery-simulator -> PostgreSQL -> Debezium CDC -> Redpanda topics
+```
+
+PostgreSQL is the OLTP system of record. The simulator writes operational rows to PostgreSQL, and Debezium publishes those database changes into Kafka-compatible topics.
+
+The simulator should not publish directly to Kafka in the main pipeline path. Direct Kafka publishing may be used only for small local smoke tests while learning or troubleshooting the broker.
 
 ---
 
@@ -719,27 +737,45 @@ The data-quality testing mode may deliberately inject invalid ones.
 
 ---
 
-# 10. Kafka event architecture
+# 10. Kafka / CDC architecture
 
-## 10.1 Primary topic
+## 10.1 Primary CDC topics
 
-Initial primary topic:
+The initial Kafka-compatible topics should come from PostgreSQL table changes captured by Debezium.
+
+Conceptual initial topics:
+
+```text
+orders
+order_items
+deliveries
+```
+
+These topics represent changes to operational tables.
+
+Messages should be keyed by the table's primary identifier where possible:
+
+```text
+order_id
+order_item_id
+delivery_id
+```
+
+For order-related processing, downstream consumers can still connect records using shared fields such as `order_id`.
+
+## 10.2 Future domain-event topic
+
+A later version may add a domain-event topic such as:
 
 ```text
 order_events
 ```
 
-Messages should be keyed/partitioned by:
-
-```text
-order_id
-```
-
-This keeps events belonging to one order within the same Kafka partition under normal operation and allows ordering guarantees within that partition.
+That topic would represent business events like `ORDER_CREATED` or `ORDER_DELIVERED`, rather than raw database row changes.
 
 ---
 
-## 10.2 Dead-letter handling
+## 10.3 Dead-letter handling
 
 Rejected events may be written to:
 
@@ -751,7 +787,7 @@ or persisted to the quarantine area of the data lake, depending on where validat
 
 ---
 
-## 10.3 Event types
+## 10.4 Future event types
 
 Initial order lifecycle events:
 
