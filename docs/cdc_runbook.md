@@ -52,15 +52,15 @@ docker compose exec redpanda rpk topic list
 
 Debezium Connect runs as a service, but it needs a connector configuration before it knows which database and tables to watch.
 
-Register the Postgres connector:
+The connector config is stored in `debezium/connectors/postgres-source.json`.
+
+Register or verify the Postgres connector:
 
 ```bash
-curl -X POST http://localhost:8083/connectors \
-  -H "Content-Type: application/json" \
-  --data @debezium/connectors/postgres-source.json
+./scripts/register_debezium_connector.sh
 ```
 
-If the connector already exists, the API returns `409`.
+The script waits for Debezium Connect, creates the connector if it is missing, and prints the connector status.
 
 Check connector status:
 
