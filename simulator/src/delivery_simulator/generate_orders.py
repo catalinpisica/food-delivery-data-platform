@@ -7,15 +7,66 @@ from delivery_simulator.models import (
     OrderItem,
     Restaurant,
 )
-
 from delivery_simulator.db import connect
 
-DELIVERED_ORDER_STATUS = "DELIVERED"
-DELIVERED_DELIVERY_STATUS = "DELIVERED"
+
+ORDER_STATUS_CREATED = "CREATED"
+ORDER_STATUS_ACCEPTED = "ACCEPTED"
+ORDER_STATUS_COURIER_ASSIGNED = "COURIER_ASSIGNED"
+ORDER_STATUS_PICKED_UP = "PICKED_UP"
+ORDER_STATUS_DELIVERED = "DELIVERED"
+ORDER_STATUS_CANCELLED = "CANCELLED"
+
+DELIVERY_STATUS_ASSIGNED = "ASSIGNED"
+DELIVERY_STATUS_PICKED_UP = "PICKED_UP"
+DELIVERY_STATUS_DELIVERED = "DELIVERED"
+DELIVERY_STATUS_CANCELLED = "CANCELLED"
+
 DELIVERY_FEE_CENTS = 299
 ITEMS_PER_ORDER = 2
 
-def generate_delivered_orders(
+
+def choose_order_status(order_id: int) -> str:
+    if order_id % 20 == 0:
+        return ORDER_STATUS_CREATED
+
+    if order_id % 20 == 1:
+        return ORDER_STATUS_ACCEPTED
+
+    if order_id % 20 == 2:
+        return ORDER_STATUS_COURIER_ASSIGNED
+
+    if order_id % 20 == 3:
+        return ORDER_STATUS_PICKED_UP
+
+    if order_id % 20 == 4:
+        return ORDER_STATUS_CANCELLED
+
+    return ORDER_STATUS_DELIVERED
+
+
+def choose_delivery_status(order_status: str) -> str | None:
+    if order_status == ORDER_STATUS_COURIER_ASSIGNED:
+        return DELIVERY_STATUS_ASSIGNED
+
+    if order_status == ORDER_STATUS_PICKED_UP:
+        return DELIVERY_STATUS_PICKED_UP
+
+    if order_status == ORDER_STATUS_DELIVERED:
+        return DELIVERY_STATUS_DELIVERED
+
+    return None
+
+
+def order_has_assigned_courier(order_status: str) -> bool:
+    return order_status in (
+        ORDER_STATUS_COURIER_ASSIGNED,
+        ORDER_STATUS_PICKED_UP,
+        ORDER_STATUS_DELIVERED,
+    )
+
+
+def generate_orders(
     customers: list[Customer],
     restaurants: list[Restaurant],
     menu_items: list[MenuItem],
@@ -30,17 +81,27 @@ def generate_delivered_orders(
     courier_index = 0
     order_item_id = 1
     delivery_id = 1
+
     for order_id in range(1, order_count + 1):
         customer = customers[customer_index]
         restaurant = restaurants[restaurant_index]
         courier = couriers[courier_index]
+        order_status = choose_order_status(order_id)
+        assigned_courier_id = None
+
+        if order_has_assigned_courier(order_status):
+            assigned_courier_id = courier.courier_id
+
         restaurant_menu_items = []
+
         for menu_item in menu_items:
             if menu_item.restaurant_id == restaurant.restaurant_id:
                 restaurant_menu_items.append(menu_item)
+
         selected_menu_items = restaurant_menu_items[:ITEMS_PER_ORDER]
 
         subtotal_cents = 0
+
         for menu_item in selected_menu_items:
             subtotal_cents = subtotal_cents + menu_item.price_cents
 
@@ -50,16 +111,17 @@ def generate_delivered_orders(
             order_id=order_id,
             customer_id=customer.customer_id,
             restaurant_id=restaurant.restaurant_id,
-            courier_id=courier.courier_id,
+            courier_id=assigned_courier_id,
             customer_zone_id=customer.zone_id,
             restaurant_zone_id=restaurant.zone_id,
-            status=DELIVERED_ORDER_STATUS,
+            status=order_status,
             subtotal_cents=subtotal_cents,
             delivery_fee_cents=DELIVERY_FEE_CENTS,
             total_amount_cents=total_amount_cents,
         )
 
         orders.append(order)
+
         for menu_item in selected_menu_items:
             order_item = OrderItem(
                 order_item_id=order_item_id,
@@ -74,16 +136,19 @@ def generate_delivered_orders(
 
             order_item_id = order_item_id + 1
 
-        delivery = Delivery(
-            delivery_id=delivery_id,
-            order_id=order_id,
-            courier_id=courier.courier_id,
-            status=DELIVERED_DELIVERY_STATUS,
-        )
+        delivery_status = choose_delivery_status(order_status)
 
-        deliveries.append(delivery)
+        if delivery_status is not None:
+            delivery = Delivery(
+                delivery_id=delivery_id,
+                order_id=order_id,
+                courier_id=courier.courier_id,
+                status=delivery_status,
+            )
 
-        delivery_id = delivery_id + 1
+            deliveries.append(delivery)
+
+            delivery_id = delivery_id + 1
 
         customer_index = customer_index + 1
         restaurant_index = restaurant_index + 1
@@ -99,6 +164,13 @@ def generate_delivered_orders(
             courier_index = 0
 
     return orders, order_items, deliveries
+
+def delete_existing_order_data() -> None:
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM app.order_items;")
+            cur.execute("DELETE FROM app.deliveries;")
+            cur.execute("DELETE FROM app.orders;")
 
 def insert_orders(orders: list[Order]) -> None:
     with connect() as conn:
@@ -161,6 +233,7 @@ def insert_orders(orders: list[Order]) -> None:
                     ),
                 )
 
+
 def insert_order_items(order_items: list[OrderItem]) -> None:
     with connect() as conn:
         with conn.cursor() as cur:
@@ -202,6 +275,7 @@ def insert_order_items(order_items: list[OrderItem]) -> None:
                         order_item.total_price_cents,
                     ),
                 )
+
 
 def insert_deliveries(deliveries: list[Delivery]) -> None:
     with connect() as conn:

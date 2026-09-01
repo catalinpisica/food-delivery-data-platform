@@ -17,10 +17,12 @@ from delivery_simulator.seed_reference_data import (
     list_zones,
 )
 from delivery_simulator.generate_orders import (
-    generate_delivered_orders,
+    generate_orders,
     insert_deliveries,
     insert_order_items,
     insert_orders,
+    delete_existing_order_data
+
 )
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -102,7 +104,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     generate_orders_parser = subparsers.add_parser(
         "generate-orders",
-        help="Generate and insert delivered orders.",
+        help="Generate and insert orders.",
     )
     generate_orders_parser.add_argument(
         "--profile",
@@ -239,7 +241,7 @@ def main() -> None:
         menu_items = list_menu_items()
         couriers = list_couriers()
 
-        orders, order_items, deliveries = generate_delivered_orders(
+        orders, order_items, deliveries = generate_orders(
             customers=customers,
             restaurants=restaurants,
             menu_items=menu_items,
@@ -268,7 +270,7 @@ def main() -> None:
         menu_items = list_menu_items()
         couriers = list_couriers()
 
-        orders, order_items, deliveries = generate_delivered_orders(
+        orders, order_items, deliveries = generate_orders(
             customers=customers,
             restaurants=restaurants,
             menu_items=menu_items,
@@ -276,6 +278,7 @@ def main() -> None:
             order_count=profile.orders_count,
         )
 
+        delete_existing_order_data()
         insert_orders(orders)
         insert_order_items(order_items)
         insert_deliveries(deliveries)
@@ -285,4 +288,3 @@ def main() -> None:
         print(f"order items inserted/updated: {len(order_items)}")
         print(f"deliveries inserted/updated: {len(deliveries)}")
         return
-
