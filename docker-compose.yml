@@ -2,6 +2,10 @@ services:
   postgres:
     image: postgres:16
     container_name: food_delivery_postgres
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
     environment:
       POSTGRES_DB: food_delivery
       POSTGRES_USER: food_delivery_user
@@ -29,12 +33,27 @@ services:
       - "0"
       - --check=false
       - --kafka-addr
-      - PLAINTEXT://0.0.0.0:9092
+      - internal://0.0.0.0:9092,external://0.0.0.0:19092
       - --advertise-kafka-addr
-      - PLAINTEXT://localhost:9092
+      - internal://redpanda:9092,external://localhost:19092
     ports:
-      - "9092:9092"
+      - "19092:19092"
       - "9644:9644"
+  
+  debezium:
+    image: debezium/connect:2.7.3.Final
+    container_name: food_delivery_debezium
+    depends_on:
+      - postgres
+      - redpanda
+    environment:
+      BOOTSTRAP_SERVERS: redpanda:9092
+      GROUP_ID: food_delivery_debezium
+      CONFIG_STORAGE_TOPIC: debezium_configs
+      OFFSET_STORAGE_TOPIC: debezium_offsets
+      STATUS_STORAGE_TOPIC: debezium_statuses
+    ports:
+      - "8083:8083"
 
 volumes:
   postgres_data:

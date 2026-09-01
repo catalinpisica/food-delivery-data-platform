@@ -198,3 +198,9 @@ VALUES
     (4, 'Amsterdam Oost', 'Amsterdam', 52.355549, 4.934670, NOW()),
     (5, 'Amsterdam Noord', 'Amsterdam', 52.399510, 4.935180, NOW())
 ON CONFLICT (zone_id) DO NOTHING;
+
+CREATE PUBLICATION food_delivery_publication
+FOR TABLE
+    app.orders,
+    app.order_items,
+    app.deliveries;

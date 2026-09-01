@@ -1,0 +1,16 @@
+{
+  "name": "food-delivery-postgres-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "plugin.name": "pgoutput",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "food_delivery_user",
+    "database.password": "food_delivery_password",
+    "database.dbname": "food_delivery",
+    "topic.prefix": "food_delivery",
+    "publication.name": "food_delivery_publication",
+    "slot.name": "food_delivery_slot",
+    "table.include.list": "app.orders,app.order_items,app.deliveries"
+  }
+}
