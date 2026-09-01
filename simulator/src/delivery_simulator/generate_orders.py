@@ -1,3 +1,6 @@
+from datetime import datetime, timedelta, timezone
+
+from delivery_simulator.db import connect
 from delivery_simulator.models import (
     Courier,
     Customer,
@@ -7,8 +10,6 @@ from delivery_simulator.models import (
     OrderItem,
     Restaurant,
 )
-from delivery_simulator.db import connect
-from datetime import datetime, timedelta, timezone
 
 ORDER_STATUS_CREATED = "CREATED"
 ORDER_STATUS_ACCEPTED = "ACCEPTED"
@@ -20,7 +21,6 @@ ORDER_STATUS_CANCELLED = "CANCELLED"
 DELIVERY_STATUS_ASSIGNED = "ASSIGNED"
 DELIVERY_STATUS_PICKED_UP = "PICKED_UP"
 DELIVERY_STATUS_DELIVERED = "DELIVERED"
-DELIVERY_STATUS_CANCELLED = "CANCELLED"
 
 DELIVERY_FEE_CENTS = 299
 ITEMS_PER_ORDER = 2
@@ -67,6 +67,7 @@ def order_has_assigned_courier(order_status: str) -> bool:
         ORDER_STATUS_DELIVERED,
     )
 
+
 def calculate_order_updated_at(order_status: str, created_at: datetime) -> datetime:
     if order_status == ORDER_STATUS_CREATED:
         return created_at
@@ -84,6 +85,7 @@ def calculate_order_updated_at(order_status: str, created_at: datetime) -> datet
         return created_at + timedelta(minutes=3)
 
     return created_at + timedelta(minutes=40)
+
 
 def calculate_delivery_timestamps(
     delivery_status: str,
@@ -111,6 +113,7 @@ def calculate_delivery_timestamps(
         updated_at = delivered_at
 
     return assigned_at, picked_up_at, delivered_at, updated_at
+
 
 def generate_orders(
     customers: list[Customer],
@@ -194,9 +197,9 @@ def generate_orders(
         if delivery_status is not None:
             assigned_at, picked_up_at, delivered_at, delivery_updated_at = (
                 calculate_delivery_timestamps(
-                        delivery_status=delivery_status,
-                        order_created_at=order_created_at,
-                    )
+                    delivery_status=delivery_status,
+                    order_created_at=order_created_at,
+                )
             )
             delivery = Delivery(
                 delivery_id=delivery_id,
@@ -229,12 +232,14 @@ def generate_orders(
 
     return orders, order_items, deliveries
 
+
 def delete_existing_order_data() -> None:
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute("DELETE FROM app.order_items;")
             cur.execute("DELETE FROM app.deliveries;")
             cur.execute("DELETE FROM app.orders;")
+
 
 def insert_orders(orders: list[Order]) -> None:
     with connect() as conn:
@@ -281,6 +286,7 @@ def insert_orders(orders: list[Order]) -> None:
                         subtotal_cents = EXCLUDED.subtotal_cents,
                         delivery_fee_cents = EXCLUDED.delivery_fee_cents,
                         total_amount_cents = EXCLUDED.total_amount_cents,
+                        created_at = EXCLUDED.created_at,
                         updated_at = EXCLUDED.updated_at;
                     """,
                     (
@@ -379,6 +385,7 @@ def insert_deliveries(deliveries: list[Delivery]) -> None:
                         assigned_at = EXCLUDED.assigned_at,
                         picked_up_at = EXCLUDED.picked_up_at,
                         delivered_at = EXCLUDED.delivered_at,
+                        created_at = EXCLUDED.created_at,
                         updated_at = EXCLUDED.updated_at;
                     """,
                     (
@@ -390,6 +397,6 @@ def insert_deliveries(deliveries: list[Delivery]) -> None:
                         delivery.picked_up_at,
                         delivery.delivered_at,
                         delivery.created_at,
-                        delivery.updated_at
+                        delivery.updated_at,
                     ),
                 )
