@@ -1,4 +1,5 @@
 import argparse
+from delivery_simulator.cdc_consumer import consume_cdc_to_s3
 from delivery_simulator.config import get_profile
 from delivery_simulator.db import connect, get_safe_database_config
 from delivery_simulator.seed_reference_data import (
@@ -117,6 +118,10 @@ def build_parser() -> argparse.ArgumentParser:
         default="tiny",
         help="Dataset size profile to generate.",
     )
+    subparsers.add_parser(
+    "consume-cdc",
+    help="Consume CDC events from Redpanda and write raw JSONL objects to SeaweedFS.",
+)
 
     return parser
 
@@ -302,4 +307,8 @@ def main() -> None:
         print(f"orders inserted/updated: {len(orders)}")
         print(f"order items inserted/updated: {len(order_items)}")
         print(f"deliveries inserted/updated: {len(deliveries)}")
+        return
+
+    if args.command == "consume-cdc":
+        consume_cdc_to_s3()
         return
