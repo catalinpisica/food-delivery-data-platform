@@ -278,9 +278,15 @@ The project must not claim that Spark is required by the dataset size.
        event topics                    │
              │                         │
              ▼                         │
+       CDC raw writer                  │
+             │                         │
+             ▼                         │
+      SeaweedFS RAW                    │
+        JSONL objects                  │
+             │                         │
+             ▼                         │
            Spark                       │
-        Structured                     │
-         Streaming                     │
+       batch / streaming               │
              │                         │
              └────────────┬────────────┘
                           ▼
@@ -342,7 +348,8 @@ GitHub Actions
 | Change data capture        | Debezium                   |
 | Event streaming            | Redpanda / Apache Kafka protocol |
 | Object storage / data lake | SeaweedFS                  |
-| File format                | Apache Parquet             |
+| Raw file format            | JSONL                      |
+| Processed file format      | Apache Parquet             |
 | Distributed processing     | Apache Spark               |
 | Streaming processing       | Spark Structured Streaming |
 | Analytical warehouse       | ClickHouse                 |
@@ -377,12 +384,14 @@ This deliberately provides experience with different ingestion patterns.
 The main source flow is:
 
 ```text
-delivery-simulator -> PostgreSQL -> Debezium CDC -> Redpanda topics
+delivery-simulator -> PostgreSQL -> Debezium CDC -> Redpanda topics -> SeaweedFS raw JSONL
 ```
 
 PostgreSQL is the OLTP system of record. The simulator writes operational rows to PostgreSQL, and Debezium publishes those database changes into Kafka-compatible topics.
 
 The simulator should not publish directly to Kafka in the main pipeline path. Direct Kafka publishing may be used only for small local smoke tests while learning or troubleshooting the broker.
+
+CDC events are landed in SeaweedFS as raw JSONL objects before semantic processing. Spark will later read this raw layer and write cleaned Parquet datasets.
 
 ---
 
@@ -763,7 +772,27 @@ delivery_id
 
 For order-related processing, downstream consumers can still connect records using shared fields such as `order_id`.
 
-## 10.2 Future domain-event topic
+## 10.2 Raw CDC landing
+
+The raw CDC writer consumes Debezium topics and writes the original Kafka messages into SeaweedFS.
+
+Initial raw storage layout:
+
+```text
+s3://food-delivery-raw/raw/cdc/orders/
+s3://food-delivery-raw/raw/cdc/order_items/
+s3://food-delivery-raw/raw/cdc/deliveries/
+```
+
+Raw CDC files use JSONL:
+
+```text
+one Kafka message per line
+```
+
+This layer should preserve the original Debezium message value and useful Kafka metadata such as topic, partition, offset, Kafka timestamp, and landing timestamp.
+
+## 10.3 Future domain-event topic
 
 A later version may add a domain-event topic such as:
 
@@ -775,7 +804,7 @@ That topic would represent business events like `ORDER_CREATED` or `ORDER_DELIVE
 
 ---
 
-## 10.3 Dead-letter handling
+## 10.4 Dead-letter handling
 
 Rejected events may be written to:
 
@@ -787,7 +816,7 @@ or persisted to the quarantine area of the data lake, depending on where validat
 
 ---
 
-## 10.4 Future event types
+## 10.5 Future event types
 
 Initial order lifecycle events:
 
