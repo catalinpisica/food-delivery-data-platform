@@ -2,6 +2,8 @@ import json
 
 from delivery_simulator.cdc_consumer import (
     build_object_key,
+    choose_available_cdc_topics,
+    list_existing_topics,
     message_to_raw_event,
     write_batch_to_s3,
 )
@@ -56,6 +58,54 @@ class FakeS3Client:
                 "Body": Body,
             }
         )
+
+
+class FakeKafkaMetadata:
+    def __init__(self, topic_names: list[str]) -> None:
+        self.topics = {}
+
+        for topic_name in topic_names:
+            self.topics[topic_name] = object()
+
+
+class FakeKafkaConsumer:
+    def __init__(self, topic_names: list[str]) -> None:
+        self.topic_names = topic_names
+
+    def list_topics(self, timeout: int):
+        return FakeKafkaMetadata(self.topic_names)
+
+
+def test_list_existing_topics_returns_topic_names() -> None:
+    consumer = FakeKafkaConsumer(
+        [
+            "food_delivery.app.orders",
+            "food_delivery.app.order_items",
+        ]
+    )
+
+    topic_names = list_existing_topics(consumer)
+
+    assert topic_names == [
+        "food_delivery.app.orders",
+        "food_delivery.app.order_items",
+    ]
+
+
+def test_choose_available_cdc_topics_skips_missing_topics() -> None:
+    consumer = FakeKafkaConsumer(
+        [
+            "food_delivery.app.orders",
+            "food_delivery.app.order_items",
+        ]
+    )
+
+    available_topics = choose_available_cdc_topics(consumer)
+
+    assert available_topics == [
+        "food_delivery.app.orders",
+        "food_delivery.app.order_items",
+    ]
 
 
 def test_build_object_key_uses_topic_partition_and_offsets() -> None:

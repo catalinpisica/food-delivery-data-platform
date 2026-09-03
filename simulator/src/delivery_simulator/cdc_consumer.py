@@ -25,6 +25,28 @@ def create_consumer() -> Consumer:
     )
 
 
+def list_existing_topics(consumer: Consumer) -> list[str]:
+    metadata = consumer.list_topics(timeout=10)
+
+    topic_names = []
+
+    for topic_name in metadata.topics.keys():
+        topic_names.append(topic_name)
+
+    return topic_names
+
+
+def choose_available_cdc_topics(consumer: Consumer) -> list[str]:
+    existing_topics = list_existing_topics(consumer)
+    available_topics = []
+
+    for topic in CDC_TOPICS:
+        if topic in existing_topics:
+            available_topics.append(topic)
+
+    return available_topics
+
+
 def build_object_key(topic: str, partition: int, first_offset: int, last_offset: int) -> str:
     table_name = topic.split(".")[-1]
     now = datetime.now(timezone.utc)
@@ -87,7 +109,18 @@ def consume_cdc_to_s3() -> None:
     messages_by_topic = {}
 
     try:
-        consumer.subscribe(CDC_TOPICS)
+        available_topics = choose_available_cdc_topics(consumer)
+
+        if len(available_topics) == 0:
+            print("No CDC topics are available yet.")
+            return
+
+        print("Consuming CDC topics:")
+
+        for topic in available_topics:
+            print(f"- {topic}")
+
+        consumer.subscribe(available_topics)
 
         while True:
             message = consumer.poll(1.0)
