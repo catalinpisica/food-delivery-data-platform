@@ -17,7 +17,7 @@ PostgreSQL is the operational system of record. The simulator writes rows into P
 From the repo root:
 
 ```bash
-docker compose up -d postgres redpanda debezium
+docker compose up -d postgres redpanda debezium seaweedfs
 ```
 
 This starts:
@@ -25,6 +25,7 @@ This starts:
 - PostgreSQL on port `5432`
 - Redpanda Kafka-compatible broker on port `19092`
 - Debezium Connect REST API on port `8083`
+- SeaweedFS S3-compatible API on port `8333`
 
 ## Verify Services
 
@@ -91,7 +92,23 @@ delivery-simulator generate-orders --profile tiny
 
 ## Consume CDC Events
 
-Read one order CDC event:
+### Land Events To Object Storage
+
+Write CDC events from Redpanda into SeaweedFS raw JSONL objects:
+
+```bash
+delivery-simulator consume-cdc
+```
+
+This writes objects under:
+
+```text
+s3://food-delivery-raw/raw/cdc/
+```
+
+### Inspect Topic Events Manually
+
+Read one order CDC event directly from Redpanda:
 
 ```bash
 docker compose exec redpanda rpk topic consume food_delivery.app.orders --num 1
